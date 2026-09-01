@@ -10,7 +10,6 @@ Tag Group Organizer is an Obsidian community plugin for arranging existing vault
 - Sort tags and groups by name or usage frequency.
 - Search tags from the organizer pane.
 - Rename tags across Markdown content and frontmatter.
-- Use the interface in English or Chinese based on Obsidian's language.
 
 ## Development
 
