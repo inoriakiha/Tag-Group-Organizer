@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"name": "tag-group-organizer",
+	"version": "0.1.0",
+	"description": "Organize Obsidian tags into flexible groups and blocks without changing tag structure.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

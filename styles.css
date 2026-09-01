@@ -1,8 +1,303 @@
-/*
+/* ============================================================
+ * 标签管理器顶部区域
+ * ============================================================ */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* 整个面板继承 Obsidian 的标准 UI 字号和正文颜色。 */
+.tag-manager-groups {
+	color: var(--text-normal);
+	font-size: var(--font-text-size);
+}
 
-If your plugin does not need CSS, delete this file.
+ /* 工具栏：排列排序、折叠和新建分组按钮。 */
+.tag-manager-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	margin-bottom: 6px;
+}
 
-*/
+/* 统一工具栏按钮的点击区域。 */
+.tag-manager-toolbar .clickable-icon {
+	width: 28px;
+	height: 28px;
+}
+
+/* 缩小按钮内的 Lucide 图标，避免图标撑满点击区域。 */
+.tag-manager-toolbar .clickable-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* 独立的新建按钮尺寸；保留给非工具栏场景使用。 */
+.tag-manager-add-button {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+}
+
+/* 标签搜索框占满侧边栏宽度。 */
+.tag-manager-search {
+	width: 100%;
+	margin-bottom: 15px;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+}
+
+/* 未分组标签与分组内标签使用相同的换行和间距规则。 */
+.tag-manager-ungrouped-tags,
+.tag-manager-block {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	min-width: 0;
+}
+
+/* 与分组内容保持相同的左侧缩进，并留出区域间距。 */
+.tag-manager-ungrouped-tags {
+	margin: 0;
+	padding: 0 6px 12px 22px;
+}
+
+/* ============================================================
+ * 标签块及拖放区域
+ * ============================================================ */
+
+/* 一个分组内的所有标签块按纵向排列。 */
+.tag-manager-blocks {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+	padding: 0 6px 8px 22px;
+}
+
+/* 单个标签块：允许标签自动换行。 */
+.tag-manager-block {
+	width: 100%;
+	min-height: 24px;
+	margin-bottom: 5px;
+}
+
+/* 标签拖到已有块上方时的目标提示。 */
+.tag-manager-block-drag-over {
+	outline: 1px dashed
+		var(--interactive-accent);
+	outline-offset: 4px;
+
+	border-radius: 6px;
+}
+
+/* 分组底部用于创建新块的拖放区域，默认保持弱提示状态。 */
+.tag-manager-new-block-zone {
+	min-height: 5px;
+
+	margin-top: 0px;
+	margin-bottom: 4px;
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	border-radius: 6px;
+
+	color: var(--text-faint);
+	opacity: 0.25;
+
+	transition:
+		opacity 0.15s ease,
+		background-color 0.15s ease;
+}
+
+/* 拖放区域的辅助文字不接收鼠标事件，避免干扰 drop。 */
+.tag-manager-new-block-hint {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	pointer-events: none;
+	display: none;
+}
+
+/* 鼠标经过时略微增强可见度。 */
+.tag-manager-new-block-zone:hover {
+	opacity: 0.6;
+}
+
+/* 标签进入新块区域时，展开并高亮实际放置位置。 */
+.tag-manager-new-block-drag-over {
+	min-height: 36px;
+
+	opacity: 1;
+
+	background-color:
+		var(--background-modifier-hover);
+
+	outline: 1px dashed
+		var(--interactive-accent);
+}
+
+/* ============================================================
+ * 标签单元格
+ * ============================================================ */
+
+/* 标签列表容器：水平排列并允许换行。 */
+.tag-manager-tag-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 8px 0 10px 22px;
+}
+
+/* 单个标签：同时容纳标签名称与使用次数。 */
+.tag-manager-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	flex: 0 0 auto;
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+
+	padding: 2px 8px;
+
+	border-radius: 10px;
+
+	cursor: pointer;
+	user-select: none;
+
+	background-color: var(--tag-background);
+
+	transition:
+		background-color 0.12s ease,
+		transform 0.12s ease;
+}
+
+/* 标签名称使用常规正文颜色。 */
+.tag-manager-tag-name {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--tag-color);
+	font-size: var(--font-ui-small);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 使用次数弱化显示，避免与标签名称争夺视觉层级。 */
+.tag-manager-tag-count {
+	flex: 0 0 auto;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 鼠标经过标签时使用 Obsidian 主题的悬停色。 */
+.tag-manager-tag:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+/* 按下或开始拖动时提供轻微缩放反馈。 */
+.tag-manager-tag:active {
+	transform: scale(0.97);
+}
+
+/* ============================================================
+ * 分组及分组标题
+ * ============================================================ */
+
+/* 分组之间保留垂直间距。 */
+.tag-manager-group {
+	margin-bottom: 2px;
+}
+
+/* 分组标题行：包含折叠箭头、名称、锁和标签数量。 */
+.tag-manager-group-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 6px;
+	margin-bottom: 3px;
+	cursor: pointer;
+	border-radius: 5px;
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	user-select: none;
+}
+
+/* 整行标题均可点击，因此悬停时统一高亮。 */
+.tag-manager-group-header:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+/* 展开/收起图标保持固定尺寸，避免切换状态时标题发生位移。 */
+.tag-manager-group-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 14px;
+	color: var(--text-muted);
+}
+
+.tag-manager-group-chevron svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* 分组名称保持完整宽度，不被相邻元素压缩。 */
+.tag-manager-group-name {
+	font-weight: var(--font-semibold, 600);
+	flex-shrink: 0;
+}
+
+/* 分组中的标签数量使用系统辅助文字样式。 */
+.tag-manager-group-count {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 标签拖到分组标题时显示接收目标。 */
+.tag-manager-group-drag-over {
+	background-color: var(--background-modifier-hover);
+	outline: 1px dashed var(--text-accent);
+}
+
+/* 锁定按钮占据名称后的剩余空间，将计数推到最右侧。 */
+.tag-manager-group-lock {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+
+	margin-right: auto;
+
+	color: var(--text-muted);
+	cursor: pointer;
+
+	opacity: 0.7;
+}
+
+/* 鼠标经过锁定按钮时提高图标对比度。 */
+.tag-manager-group-lock:hover {
+	opacity: 1;
+}
+
+/* 限制锁图标尺寸，使其与分组标题文字协调。 */
+.tag-manager-group-lock svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* 弹窗输入框和操作按钮统一复用，避免在 TypeScript 中写内联样式。 */
+.tag-manager-modal-input {
+	width: 100%;
+	margin-bottom: 12px;
+}
+
+.tag-manager-modal-message {
+	white-space: pre-line;
+}
+
+.tag-manager-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+}
