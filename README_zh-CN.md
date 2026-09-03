@@ -4,6 +4,8 @@
 
 Tag Group Organizer lets you arrange existing Obsidian tags into visual groups and blocks without changing their original tag structure.
 
+![Tag Group Organizer](https://tupian.li/images/2026/09/03/6a98e6312a32e.png)
+
 ---
 
 ### 简介
@@ -28,19 +30,23 @@ Tag Group Organizer 是一款用于整理 Obsidian 标签的本地插件。它�
 
 ### 安装
 
-当前测试版可通过手动方式安装：
+#### 从 Obsidian 社区插件安装
 
-1. 在仓库的 `.obsidian/plugins/` 目录中创建 `tag-group-organizer` 文件夹。
-2. 将以下文件复制到该文件夹：
+1. 在 Obsidian 中打开 **设置 → 第三方插件**。
+2. 点击 **浏览**，搜索 **Tag Group Organizer**。
+3. 点击 **安装**。
+4. 安装完成后，点击 **启用**。
 
-   - `main.js`
-   - `manifest.json`
-   - `styles.css`
+#### 手动安装
 
-3. 重新加载 Obsidian。
-4. 前往 **设置 → 第三方插件**，启用 **Tag Group Organizer**。
+你也可以从 [GitHub 最新版本](../../releases/latest) 手动安装：
 
-要求 Obsidian `1.8.7` 或更高版本。
+1. 下载 `main.js`、`manifest.json` 和 `styles.css`。
+2. 在仓库的 `.obsidian/plugins/` 目录下创建名为 `tag-group-organizer` 的文件夹。
+3. 将下载的三个文件放入该文件夹。
+4. 重新加载 Obsidian，然后前往 **设置 → 第三方插件** 启用 **Tag Group Organizer**。
+
+需要 Obsidian `1.8.7` 或更高版本。
 
 ### 快速开始
 

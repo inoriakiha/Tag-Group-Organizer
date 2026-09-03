@@ -4,6 +4,8 @@ English | [简体中文](README_zh-CN.md)
 
 Tag Group Organizer lets you arrange existing Obsidian tags into visual groups and blocks without changing their original tag structure.
 
+![Tag Group Organizer](https://tupian.li/images/2026/09/03/6a98e6312a32e.png)
+
 ---
 
 ### Overview
@@ -28,17 +30,21 @@ Regular grouping, moving, and sorting operations only change the plugin's organi
 
 ### Installation
 
-The current test release can be installed manually:
+#### Install from Obsidian Community Plugins
 
-1. Create a folder named `tag-group-organizer` inside your vault's `.obsidian/plugins/` directory.
-2. Copy these files into that folder:
+1. Open **Settings → Community plugins** in Obsidian.
+2. Select **Browse** and search for **Tag Group Organizer**.
+3. Select **Install**.
+4. Once installed, select **Enable**.
 
-   - `main.js`
-   - `manifest.json`
-   - `styles.css`
+#### Manual installation
 
-3. Reload Obsidian.
-4. Open **Settings → Community plugins** and enable **Tag Group Organizer**.
+Alternatively, you can install the plugin manually from the [latest GitHub release](../../releases/latest):
+
+1. Download `main.js`, `manifest.json`, and `styles.css`.
+2. Create a folder named `tag-group-organizer` inside your vault's `.obsidian/plugins/` directory.
+3. Place the downloaded files in that folder.
+4. Reload Obsidian and enable **Tag Group Organizer** under **Settings → Community plugins**.
 
 Obsidian `1.8.7` or later is required.
 

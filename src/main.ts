@@ -4,6 +4,7 @@ import {
 	Menu,
 	Modal,
 	Notice,
+	Platform,
 	Plugin,
 	WorkspaceLeaf,
 	getLanguage,
@@ -22,6 +23,9 @@ function getCurrentLanguage(): Language {
 }
 
 const VIEW_TYPE_TAG_MANAGER = 'tag-manager-view';
+const MOBILE_LONG_PRESS_DELAY_MS = 550;
+const MOBILE_LONG_PRESS_MOVE_THRESHOLD_PX = 10;
+const MOBILE_LONG_PRESS_SUPPRESSION_MS = 800;
 
 interface TagBlock {
 	id: string;
@@ -1197,6 +1201,96 @@ private renderTag(
 		cls: 'tag-manager-tag-count',
 	});
 
+	let longPressTimer: number | null = null;
+	let activePointerId: number | null = null;
+	let longPressStartX = 0;
+	let longPressStartY = 0;
+	let suppressInteractionUntil = 0;
+
+	const cancelLongPress = () => {
+		if (longPressTimer !== null) {
+			window.clearTimeout(longPressTimer);
+			longPressTimer = null;
+		}
+
+		activePointerId = null;
+	};
+
+	if (Platform.isMobile) {
+		tagEl.addEventListener(
+			'pointerdown',
+			(event: PointerEvent) => {
+				if (
+					!event.isPrimary ||
+					event.pointerType === 'mouse' ||
+					event.button !== 0
+				) {
+					return;
+				}
+
+				cancelLongPress();
+				activePointerId = event.pointerId;
+				longPressStartX = event.clientX;
+				longPressStartY = event.clientY;
+
+				longPressTimer = window.setTimeout(() => {
+					longPressTimer = null;
+
+					if (
+						activePointerId !== event.pointerId ||
+						!tagEl.isConnected
+					) {
+						return;
+					}
+
+					activePointerId = null;
+					suppressInteractionUntil =
+						Date.now() + MOBILE_LONG_PRESS_SUPPRESSION_MS;
+
+					this.showTagMenu(
+						tag,
+						new MouseEvent('contextmenu', {
+							bubbles: true,
+							cancelable: true,
+							clientX: longPressStartX,
+							clientY: longPressStartY,
+							view: window,
+						}),
+						sourceGroup,
+					);
+				}, MOBILE_LONG_PRESS_DELAY_MS);
+			},
+		);
+
+		tagEl.addEventListener(
+			'pointermove',
+			(event: PointerEvent) => {
+				if (event.pointerId !== activePointerId) {
+					return;
+				}
+
+				const deltaX = event.clientX - longPressStartX;
+				const deltaY = event.clientY - longPressStartY;
+				const movementSquared = deltaX ** 2 + deltaY ** 2;
+
+				if (
+					movementSquared >
+					MOBILE_LONG_PRESS_MOVE_THRESHOLD_PX ** 2
+				) {
+					cancelLongPress();
+				}
+			},
+		);
+
+		for (const eventName of [
+			'pointerup',
+			'pointercancel',
+			'lostpointercapture',
+		]) {
+			tagEl.addEventListener(eventName, cancelLongPress);
+		}
+	}
+
 	// 让 Tag 可以被拖动
 	tagEl.draggable = true;
 
@@ -1204,6 +1298,8 @@ private renderTag(
 	tagEl.addEventListener(
 		'dragstart',
 		(event: DragEvent) => {
+			cancelLongPress();
+
 			if (!event.dataTransfer) {
 				return;
 			}
@@ -1255,7 +1351,16 @@ if (sourceBlock) {
 	);
 
 	// 左键：搜索这个 Tag
-	tagEl.onclick = () => {
+	tagEl.onclick = (event: MouseEvent) => {
+		if (
+			Platform.isMobile &&
+			Date.now() < suppressInteractionUntil
+		) {
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
 		const app = this.app as App & {
 			internalPlugins: {
 				getPluginById(id: string): {
@@ -1279,6 +1384,10 @@ if (sourceBlock) {
 		event: MouseEvent,
 	) => {
 		event.preventDefault();
+
+		if (Platform.isMobile) {
+			return;
+		}
 
 		this.showTagMenu(
 			tag,
