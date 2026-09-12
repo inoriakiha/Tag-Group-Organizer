@@ -21,12 +21,37 @@
 .tag-manager-toolbar .clickable-icon {
 	width: 28px;
 	height: 28px;
+	min-width: 28px;
+	min-height: 28px;
+	padding: 0;
 }
 
-/* 缩小按钮内的 Lucide 图标，避免图标撑满点击区域。 */
+/* 使用接近 Obsidian 系统工具栏的 Lucide 图标尺寸。 */
 .tag-manager-toolbar .clickable-icon svg {
-	width: 16px;
-	height: 16px;
+	width: 18px;
+	height: 18px;
+}
+
+/* 多选模式开启时使用系统强调色标识工具栏状态。 */
+.tag-manager-toolbar .tag-manager-multi-select-active,
+.tag-manager-toolbar .tag-manager-multi-select-active:hover {
+	color: var(--text-on-accent);
+	background-color: var(--interactive-accent);
+}
+
+/* iPhone、iPad 等触屏设备使用更大的点击区域和图标。 */
+@media (pointer: coarse) {
+	.tag-manager-toolbar .clickable-icon {
+		width: 36px;
+		height: 36px;
+		min-width: 36px;
+		min-height: 36px;
+	}
+
+	.tag-manager-toolbar .clickable-icon svg {
+		width: 20px;
+		height: 20px;
+	}
 }
 
 /* 独立的新建按钮尺寸；保留给非工具栏场景使用。 */
@@ -198,6 +223,17 @@
 /* 按下或开始拖动时提供轻微缩放反馈。 */
 .tag-manager-tag:active {
 	transform: scale(0.97);
+}
+
+/* 多选模式中的已选标签使用系统强调色。 */
+.tag-manager-tag.is-selected,
+.tag-manager-tag.is-selected:hover {
+	background-color: var(--interactive-accent);
+}
+
+.tag-manager-tag.is-selected .tag-manager-tag-name,
+.tag-manager-tag.is-selected .tag-manager-tag-count {
+	color: var(--text-on-accent);
 }
 
 /* ============================================================

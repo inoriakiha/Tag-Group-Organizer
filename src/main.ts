@@ -40,6 +40,11 @@ interface TagGroup {
 	locked: boolean;
 }
 
+interface SelectedTag {
+	tag: string;
+	sourceGroupId?: string;
+}
+
 interface TagManagerData {
 	groups: TagGroup[];
 	version: number;
@@ -224,6 +229,9 @@ private cleanGroupData(): boolean {
 class TagManagerView extends ItemView {
 	plugin: TagManagerPlugin;
 	t: Language;
+	private isMultiSelectMode = false;
+	private selectedTags = new Map<string, SelectedTag>();
+	private multiSelectButtonEl: HTMLButtonElement | null = null;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -254,6 +262,8 @@ class TagManagerView extends ItemView {
 }
 
 	async onClose() {
+		this.selectedTags.clear();
+		this.multiSelectButtonEl = null;
 		this.contentEl.empty();
 	}
 
@@ -535,7 +545,24 @@ frequencySortBtn.onclick = async () => {
 		this.render();
 	};
 
-	// ④ 添加分组
+	// ④ 多选模式
+	const multiSelectBtn =
+		toolbar.createEl('button', {
+			cls: 'clickable-icon',
+			attr: {
+				'aria-pressed': String(this.isMultiSelectMode),
+			},
+		});
+
+	this.multiSelectButtonEl = multiSelectBtn;
+	setIcon(multiSelectBtn, 'list-checks');
+	this.updateMultiSelectButton();
+
+	multiSelectBtn.onclick = () => {
+		this.toggleMultiSelectMode();
+	};
+
+	// ⑤ 添加分组
 	const addGroupBtn =
 		toolbar.createEl('button', {
 			cls: 'clickable-icon',
@@ -1176,6 +1203,84 @@ private renderUngrouped(
 	}
 }
 
+private toggleMultiSelectMode() {
+	this.isMultiSelectMode = !this.isMultiSelectMode;
+
+	if (!this.isMultiSelectMode) {
+		this.selectedTags.clear();
+	}
+
+	this.updateMultiSelectButton();
+	this.updateTagSelectionStyles();
+}
+
+private updateMultiSelectButton() {
+	const button = this.multiSelectButtonEl;
+
+	if (!button) {
+		return;
+	}
+
+	button.toggleClass(
+		'tag-manager-multi-select-active',
+		this.isMultiSelectMode,
+	);
+	button.setAttribute(
+		'aria-pressed',
+		String(this.isMultiSelectMode),
+	);
+	button.setAttribute(
+		'aria-label',
+		this.isMultiSelectMode
+			? this.t.exitMultiSelect(this.selectedTags.size)
+			: this.t.enterMultiSelect,
+	);
+}
+
+private toggleTagSelection(
+	tag: string,
+	sourceGroupId?: string,
+) {
+	if (this.selectedTags.has(tag)) {
+		this.selectedTags.delete(tag);
+	} else {
+		this.selectedTags.set(tag, {
+			tag,
+			sourceGroupId,
+		});
+	}
+
+	this.updateMultiSelectButton();
+	this.updateTagSelectionStyles();
+}
+
+private clearSelection() {
+	this.selectedTags.clear();
+	this.updateMultiSelectButton();
+	this.updateTagSelectionStyles();
+}
+
+private updateTagSelectionStyles() {
+	const tagElements =
+		this.contentEl.querySelectorAll<HTMLElement>(
+			'.tag-manager-tag',
+		);
+
+	for (const tagElement of Array.from(tagElements)) {
+		const tag = tagElement.dataset.tag;
+		const isSelected =
+			this.isMultiSelectMode &&
+			tag !== undefined &&
+			this.selectedTags.has(tag);
+
+		tagElement.toggleClass('is-selected', isSelected);
+		tagElement.setAttribute(
+			'aria-pressed',
+			String(isSelected),
+		);
+	}
+}
+
 
 
 private renderTag(
@@ -1187,7 +1292,19 @@ private renderTag(
 ) {
 	const tagEl = container.createDiv({
 		cls: 'tag-manager-tag',
+		attr: {
+			'data-tag': tag,
+			'aria-pressed': String(
+				this.isMultiSelectMode &&
+				this.selectedTags.has(tag),
+			),
+		},
 	});
+
+	tagEl.toggleClass(
+		'is-selected',
+		this.isMultiSelectMode && this.selectedTags.has(tag),
+	);
 
 	// Tag 名称
 	tagEl.createSpan({
@@ -1216,7 +1333,7 @@ private renderTag(
 		activePointerId = null;
 	};
 
-	if (Platform.isMobile) {
+	if (Platform.isMobileApp) {
 		tagEl.addEventListener(
 			'pointerdown',
 			(event: PointerEvent) => {
@@ -1247,7 +1364,7 @@ private renderTag(
 					suppressInteractionUntil =
 						Date.now() + MOBILE_LONG_PRESS_SUPPRESSION_MS;
 
-					this.showTagMenu(
+					this.showTagContextMenu(
 						tag,
 						new MouseEvent('contextmenu', {
 							bubbles: true,
@@ -1353,11 +1470,18 @@ if (sourceBlock) {
 	// 左键：搜索这个 Tag
 	tagEl.onclick = (event: MouseEvent) => {
 		if (
-			Platform.isMobile &&
+			Platform.isMobileApp &&
 			Date.now() < suppressInteractionUntil
 		) {
 			event.preventDefault();
 			event.stopPropagation();
+			return;
+		}
+
+		if (this.isMultiSelectMode) {
+			event.preventDefault();
+			event.stopPropagation();
+			this.toggleTagSelection(tag, sourceGroup?.id);
 			return;
 		}
 
@@ -1385,16 +1509,32 @@ if (sourceBlock) {
 	) => {
 		event.preventDefault();
 
-		if (Platform.isMobile) {
+		if (Platform.isMobileApp) {
 			return;
 		}
 
-		this.showTagMenu(
+		this.showTagContextMenu(
 			tag,
 			event,
 			sourceGroup,
 		);
 	};
+}
+
+private showTagContextMenu(
+	tag: string,
+	event: MouseEvent,
+	currentGroup?: TagGroup,
+) {
+	if (
+		this.isMultiSelectMode &&
+		this.selectedTags.has(tag)
+	) {
+		this.showSelectedTagsMenu(event);
+		return;
+	}
+
+	this.showTagMenu(tag, event, currentGroup);
 }
 
 
@@ -1405,6 +1545,314 @@ private groupContainsTag(
 	return group.blocks.some((block) =>
 		block.tags.includes(tag),
 	);
+}
+
+private getSelectedTagNames(): string[] {
+	return Array.from(
+		this.selectedTags.values(),
+		(selectedTag) => selectedTag.tag,
+	);
+}
+
+private getCommonSelectionSourceGroup(): TagGroup | null {
+	const selections = Array.from(this.selectedTags.values());
+	const sourceGroupId = selections[0]?.sourceGroupId;
+
+	if (
+		!sourceGroupId ||
+		selections.some(
+			(selection) =>
+				selection.sourceGroupId !== sourceGroupId,
+		)
+	) {
+		return null;
+	}
+
+	return this.plugin.data.groups.find(
+		(group) => group.id === sourceGroupId,
+	) ?? null;
+}
+
+private getOrCreateFirstBlock(group: TagGroup): TagBlock {
+	const firstBlock = group.blocks[0];
+
+	if (firstBlock) {
+		return firstBlock;
+	}
+
+	const block: TagBlock = {
+		id: crypto.randomUUID(),
+		tags: [],
+	};
+
+	group.blocks.push(block);
+	return block;
+}
+
+private removeTagsFromGroup(
+	group: TagGroup,
+	tags: Set<string>,
+): number {
+	const removedCount = Array.from(tags).filter(
+		(tag) => this.groupContainsTag(group, tag),
+	).length;
+
+	if (removedCount === 0) {
+		return 0;
+	}
+
+	for (const block of group.blocks) {
+		block.tags = block.tags.filter(
+			(tag) => !tags.has(tag),
+		);
+	}
+
+	group.blocks = group.blocks.filter(
+		(block) => block.tags.length > 0,
+	);
+
+	if (group.blocks.length === 0) {
+		group.blocks.push({
+			id: crypto.randomUUID(),
+			tags: [],
+		});
+	}
+
+	return removedCount;
+}
+
+private async addSelectedTagsToGroup(group: TagGroup) {
+	const tags = this.getSelectedTagNames();
+	const firstBlock = this.getOrCreateFirstBlock(group);
+	let addedCount = 0;
+
+	for (const tag of tags) {
+		if (!this.groupContainsTag(group, tag)) {
+			firstBlock.tags.push(tag);
+			addedCount += 1;
+		}
+	}
+
+	if (addedCount === 0) {
+		return;
+	}
+
+	await this.plugin.saveDataToDisk();
+	this.render();
+	new Notice(this.t.selectedTagsAdded(addedCount, group.name));
+}
+
+private async removeSelectedTagsFromGroup(group: TagGroup) {
+	const removedCount = this.removeTagsFromGroup(
+		group,
+		new Set(this.getSelectedTagNames()),
+	);
+
+	if (removedCount === 0) {
+		return;
+	}
+
+	await this.plugin.saveDataToDisk();
+	this.selectedTags.clear();
+	this.render();
+	new Notice(this.t.selectedTagsRemoved(removedCount, group.name));
+}
+
+private async moveSelectedTagsToGroup(
+	sourceGroup: TagGroup,
+	targetGroup: TagGroup,
+) {
+	const selectedTags = this.getSelectedTagNames();
+	const selectedTagSet = new Set(selectedTags);
+	const movedCount = this.removeTagsFromGroup(
+		sourceGroup,
+		selectedTagSet,
+	);
+
+	if (movedCount === 0) {
+		return;
+	}
+
+	const firstTargetBlock = this.getOrCreateFirstBlock(targetGroup);
+
+	for (const tag of selectedTags) {
+		if (!this.groupContainsTag(targetGroup, tag)) {
+			firstTargetBlock.tags.push(tag);
+		}
+	}
+
+	await this.plugin.saveDataToDisk();
+	this.selectedTags.clear();
+	this.render();
+	new Notice(
+		this.t.selectedTagsMoved(
+			movedCount,
+			sourceGroup.name,
+			targetGroup.name,
+		),
+	);
+}
+
+private createGroupFromSelectedTags() {
+	const tags = this.getSelectedTagNames();
+
+	if (tags.length === 0) {
+		return;
+	}
+
+	new CreateGroupModal(
+		this.app,
+		this.t,
+		async (name) => {
+			const groupName = name.trim();
+
+			this.plugin.data.groups.push({
+				id: crypto.randomUUID(),
+				name: groupName,
+				blocks: [{
+					id: crypto.randomUUID(),
+					tags: [...tags],
+				}],
+				collapsed: false,
+				locked: false,
+			});
+
+			await this.plugin.saveDataToDisk();
+			this.render();
+			new Notice(this.t.groupCreated(groupName));
+		},
+	).open();
+}
+
+private showSelectedTagsMenu(event: MouseEvent) {
+	const selectedTags = this.getSelectedTagNames();
+
+	if (selectedTags.length === 0) {
+		return;
+	}
+
+	const menu = new Menu();
+	const commonSourceGroup =
+		this.getCommonSelectionSourceGroup();
+
+	menu.addItem((item) => {
+		item
+			.setTitle(this.t.selectedTagsCount(selectedTags.length))
+			.setDisabled(true);
+	});
+
+	menu.addItem((item) => {
+		item
+			.setTitle(this.t.addToGroup)
+			.setIcon('folder-plus')
+			.setDisabled(this.plugin.data.groups.length === 0);
+
+		const submenuItem = item as typeof item & {
+			setSubmenu(): void;
+			submenu: Menu;
+		};
+
+		submenuItem.setSubmenu();
+
+		for (const group of this.plugin.data.groups) {
+			const containsAll = selectedTags.every(
+				(tag) => this.groupContainsTag(group, tag),
+			);
+
+			submenuItem.submenu.addItem((subItem) => {
+				subItem
+					.setTitle(group.name)
+					.setChecked(containsAll)
+					.setDisabled(group.locked);
+
+				if (group.locked) {
+					subItem.setIcon('lock');
+					return;
+				}
+
+				subItem.onClick(async () => {
+					await this.addSelectedTagsToGroup(group);
+				});
+			});
+		}
+	});
+
+	menu.addItem((item) => {
+		item
+			.setTitle(this.t.createGroupFromSelected)
+			.setIcon('folder-plus')
+			.onClick(() => this.createGroupFromSelectedTags());
+	});
+
+	if (commonSourceGroup) {
+		menu.addSeparator();
+
+		menu.addItem((item) => {
+			item
+				.setTitle(this.t.removeFromGroup)
+				.setIcon('circle-minus')
+				.setDisabled(commonSourceGroup.locked);
+
+			if (!commonSourceGroup.locked) {
+				item.onClick(async () => {
+					await this.removeSelectedTagsFromGroup(
+						commonSourceGroup,
+					);
+				});
+			}
+		});
+
+		const targetGroups = this.plugin.data.groups.filter(
+			(group) => group.id !== commonSourceGroup.id,
+		);
+
+		menu.addItem((item) => {
+			item
+				.setTitle(this.t.moveToGroup)
+				.setIcon('folder-input')
+				.setDisabled(
+					commonSourceGroup.locked ||
+					targetGroups.length === 0,
+				);
+
+			const submenuItem = item as typeof item & {
+				setSubmenu(): void;
+				submenu: Menu;
+			};
+
+			submenuItem.setSubmenu();
+
+			for (const targetGroup of targetGroups) {
+				submenuItem.submenu.addItem((subItem) => {
+					subItem
+						.setTitle(targetGroup.name)
+						.setDisabled(targetGroup.locked);
+
+					if (targetGroup.locked) {
+						subItem.setIcon('lock');
+						return;
+					}
+
+					subItem.onClick(async () => {
+						await this.moveSelectedTagsToGroup(
+							commonSourceGroup,
+							targetGroup,
+						);
+					});
+				});
+			}
+		});
+	}
+
+	menu.addSeparator();
+	menu.addItem((item) => {
+		item
+			.setTitle(this.t.clearSelection)
+			.setIcon('x')
+			.onClick(() => this.clearSelection());
+	});
+
+	menu.showAtMouseEvent(event);
 }
 
 

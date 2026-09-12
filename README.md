@@ -26,27 +26,15 @@ Regular grouping, moving, and sorting operations only change the plugin's organi
 - Manage group membership from the tag context menu.
 - Rename or delete groups.
 - Rename tags in supported Markdown content and YAML tag lists.
+- Batch-select tags for faster organization of large vaults.
 - Automatically use English or Chinese based on Obsidian's interface language.
 
 ### Installation
-
-#### Install from Obsidian Community Plugins
 
 1. Open **Settings → Community plugins** in Obsidian.
 2. Select **Browse** and search for **Tag Group Organizer**.
 3. Select **Install**.
 4. Once installed, select **Enable**.
-
-#### Manual installation
-
-Alternatively, you can install the plugin manually from the [latest GitHub release](../../releases/latest):
-
-1. Download `main.js`, `manifest.json`, and `styles.css`.
-2. Create a folder named `tag-group-organizer` inside your vault's `.obsidian/plugins/` directory.
-3. Place the downloaded files in that folder.
-4. Reload Obsidian and enable **Tag Group Organizer** under **Settings → Community plugins**.
-
-Obsidian `1.8.7` or later is required.
 
 ### Quick start
 
@@ -96,6 +84,25 @@ The current rename operation supports:
 - `tags` stored as a list in YAML frontmatter.
 
 Tag names cannot contain spaces.
+
+### Batch selection
+
+For vaults with a large number of existing tags, Tag Group Organizer includes a batch selection mode to speed up initial organization and large-scale cleanup.
+
+Enable **multi-select mode** from the toolbar, then select multiple tags at once. Selected tags remain selected even when you change the search query.
+
+Available batch actions include:
+
+- **Add to group**
+- **Create group from selected**
+- **Clear selection**
+
+When all selected tags come from the same group, you can also:
+
+- **Remove from current group**
+- **Move to group**
+
+On desktop, open the batch menu with a right-click. On mobile, use a long press.
 
 ### Data and privacy
 

@@ -1,6 +1,6 @@
 {
 	"name": "tag-group-organizer",
-	"version": "0.1.1",
+	"version": "0.2.0",
 	"description": "Organize Obsidian tags into flexible groups and blocks without changing tag structure.",
 	"main": "main.js",
 	"type": "module",

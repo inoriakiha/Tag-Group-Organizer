@@ -11,6 +11,9 @@ const en = {
 
 	expandAll: 'Expand all groups',
 	collapseAll: 'Collapse all groups',
+	enterMultiSelect: 'Enter multi-select mode',
+	exitMultiSelect: (count: number) =>
+		`Exit multi-select mode (${count} selected)`,
 
 	addGroup: 'Add group',
 
@@ -24,6 +27,12 @@ const en = {
 	removeFromGroup: 'Remove from current group',
 	renameTag: 'Rename',
 	manageGroups: 'Manage groups',
+	selectedTagsCount: (count: number) =>
+		`${count} tag(s) selected`,
+	addToGroup: 'Add to group',
+	createGroupFromSelected: 'Create group from selected',
+	clearSelection: 'Clear selection',
+	moveToGroup: 'Move to group',
 
 	// Group menu
 	renameGroup: 'Rename',
@@ -56,6 +65,18 @@ const en = {
 
 	tagMoved: (tag: string, group: string) =>
 		`Moved #${tag} to ${group}`,
+
+	selectedTagsAdded: (count: number, group: string) =>
+		`Added ${count} tag(s) to ${group}`,
+
+	selectedTagsRemoved: (count: number, group: string) =>
+		`Removed ${count} tag(s) from ${group}`,
+
+	selectedTagsMoved: (
+		count: number,
+		sourceGroup: string,
+		targetGroup: string,
+	) => `Moved ${count} tag(s) from ${sourceGroup} to ${targetGroup}`,
 
 	groupCreated: (group: string) =>
 		`Created group: ${group}`,
