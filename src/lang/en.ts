@@ -39,6 +39,7 @@ const en = {
 	deleteGroup: 'Delete',
 
 	// Block
+	moveBlock: 'Move block',
 	createBlock: 'Drop here to create a new block',
 	blockCreated: (tag: string) =>
 		`Created a new block with #${tag}`,

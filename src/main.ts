@@ -26,6 +26,8 @@ const VIEW_TYPE_TAG_MANAGER = 'tag-manager-view';
 const MOBILE_LONG_PRESS_DELAY_MS = 550;
 const MOBILE_LONG_PRESS_MOVE_THRESHOLD_PX = 10;
 const MOBILE_LONG_PRESS_SUPPRESSION_MS = 800;
+const TAG_DRAG_TYPE = 'application/x-tag-manager-tag';
+const BLOCK_DRAG_TYPE = 'application/x-tag-manager-block';
 
 interface TagBlock {
 	id: string;
@@ -122,6 +124,15 @@ export default class TagManagerPlugin extends Plugin {
 		},
 	),
 );
+
+		this.registerEvent(
+			this.app.metadataCache.on(
+				'deleted',
+				() => {
+					this.refreshView();
+				},
+			),
+		);
 
 	}
 
@@ -232,6 +243,7 @@ class TagManagerView extends ItemView {
 	private isMultiSelectMode = false;
 	private selectedTags = new Map<string, SelectedTag>();
 	private multiSelectButtonEl: HTMLButtonElement | null = null;
+	private draggedBlock: { groupId: string; blockId: string } | null = null;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -698,6 +710,10 @@ private renderGroup(
 header.addEventListener(
 	'dragover',
 	(event: DragEvent) => {
+		if (!this.hasDragType(event, TAG_DRAG_TYPE)) {
+			return;
+		}
+
 		// 已锁定的 Group 不接受 Tag
 		if (group.locked) {
 			return;
@@ -742,7 +758,7 @@ header.addEventListener(
 
 			const tag =
 				event.dataTransfer?.getData(
-					'application/x-tag-manager-tag',
+					TAG_DRAG_TYPE,
 				);
 
 			if (!tag) {
@@ -899,12 +915,63 @@ for (const block of group.blocks) {
 	const blockEl =
 		blockContainer.createDiv({
 			cls: 'tag-manager-block',
+			attr: {
+				'data-group-id': group.id,
+				'data-block-id': block.id,
+			},
 		});
+
+	const blockHandle = blockEl.createEl('button', {
+		cls: 'clickable-icon tag-manager-block-drag-handle',
+		attr: {
+			'aria-label': this.t.moveBlock,
+			title: this.t.moveBlock,
+		},
+	});
+	blockHandle.disabled = group.locked;
+	setIcon(blockHandle, 'grip-vertical');
+
+	const blockTagsEl = blockEl.createDiv({
+		cls: 'tag-manager-block-tags',
+	});
+
+	this.registerBlockDragHandle(
+		blockHandle,
+		blockEl,
+		group,
+		block,
+	);
 
 	// Block 接收 Tag 拖拽
 	blockEl.addEventListener(
 		'dragover',
 		(event: DragEvent) => {
+			if (this.hasDragType(event, BLOCK_DRAG_TYPE)) {
+				if (
+					this.draggedBlock?.groupId !== group.id ||
+					this.draggedBlock.blockId === block.id
+				) {
+					return;
+				}
+
+				event.preventDefault();
+				event.stopPropagation();
+				if (event.dataTransfer) {
+					event.dataTransfer.dropEffect = 'move';
+				}
+
+				const bounds = blockEl.getBoundingClientRect();
+				this.showBlockDropIndicator(
+					blockEl,
+					event.clientY >= bounds.top + bounds.height / 2,
+				);
+				return;
+			}
+
+			if (!this.hasDragType(event, TAG_DRAG_TYPE)) {
+				return;
+			}
+
 			if (group.locked) {
 				return;
 			}
@@ -924,10 +991,19 @@ for (const block of group.blocks) {
 
 	blockEl.addEventListener(
 		'dragleave',
-		() => {
+		(event: DragEvent) => {
+			if (
+				event.relatedTarget instanceof Node &&
+				blockEl.contains(event.relatedTarget)
+			) {
+				return;
+			}
+
 			blockEl.removeClass(
 				'tag-manager-block-drag-over',
 			);
+			blockEl.removeClass('tag-manager-block-drop-before');
+			blockEl.removeClass('tag-manager-block-drop-after');
 		},
 	);
 
@@ -935,6 +1011,34 @@ for (const block of group.blocks) {
 		'drop',
 		(event: DragEvent) => {
 			void (async () => {
+			if (this.hasDragType(event, BLOCK_DRAG_TYPE)) {
+				event.preventDefault();
+				event.stopPropagation();
+
+				const sourceBlockId =
+					event.dataTransfer?.getData(BLOCK_DRAG_TYPE);
+				const sourceGroupId =
+					event.dataTransfer?.getData(
+						'application/x-tag-manager-block-source-group',
+					);
+				const bounds = blockEl.getBoundingClientRect();
+				const placeAfter =
+					event.clientY >= bounds.top + bounds.height / 2;
+
+				this.clearBlockDragStyles();
+				this.draggedBlock = null;
+
+				if (sourceGroupId === group.id && sourceBlockId) {
+					await this.moveBlock(
+						group,
+						sourceBlockId,
+						block.id,
+						placeAfter,
+					);
+				}
+				return;
+			}
+
 			if (group.locked) {
 				return;
 			}
@@ -947,7 +1051,7 @@ for (const block of group.blocks) {
 
 			const tag =
 				event.dataTransfer?.getData(
-					'application/x-tag-manager-tag',
+					TAG_DRAG_TYPE,
 				);
 
 			if (!tag) {
@@ -1028,7 +1132,7 @@ new Notice(
 	// Block 内的 Tag
 	for (const tag of sortedBlockTags) {
 		this.renderTag(
-			blockEl,
+			blockTagsEl,
 			tag,
 			allTags.get(tag) ?? 0,
 			group,
@@ -1053,6 +1157,10 @@ if (!group.locked) {
 	newBlockZone.addEventListener(
 		'dragover',
 		(event: DragEvent) => {
+			if (!this.hasDragType(event, TAG_DRAG_TYPE)) {
+				return;
+			}
+
 			event.preventDefault();
 
 			if (event.dataTransfer) {
@@ -1089,7 +1197,7 @@ newBlockZone.addEventListener(
 
 		const tag =
 			event.dataTransfer?.getData(
-				'application/x-tag-manager-tag',
+				TAG_DRAG_TYPE,
 			);
 
 		if (!tag) {
@@ -1178,6 +1286,216 @@ newBlockZone.addEventListener(
 }
 );
 }
+}
+
+private hasDragType(event: DragEvent, type: string): boolean {
+	return Array.from(event.dataTransfer?.types ?? []).includes(type);
+}
+
+private clearBlockDragStyles() {
+	const blockElements = this.contentEl.querySelectorAll<HTMLElement>(
+		'.tag-manager-block',
+	);
+
+	for (const blockElement of Array.from(blockElements)) {
+		blockElement.removeClass('tag-manager-block-is-dragging');
+		blockElement.removeClass('tag-manager-block-drop-before');
+		blockElement.removeClass('tag-manager-block-drop-after');
+	}
+}
+
+private showBlockDropIndicator(
+	blockEl: HTMLElement,
+	placeAfter: boolean,
+) {
+	this.clearBlockDragStyles();
+
+	const sourceBlock = this.draggedBlock
+		? this.contentEl.querySelector<HTMLElement>(
+			`.tag-manager-block[data-group-id="${this.draggedBlock.groupId}"]` +
+				`[data-block-id="${this.draggedBlock.blockId}"]`,
+		)
+		: null;
+	sourceBlock?.addClass('tag-manager-block-is-dragging');
+
+	blockEl.addClass(
+		placeAfter
+			? 'tag-manager-block-drop-after'
+			: 'tag-manager-block-drop-before',
+	);
+}
+
+private registerBlockDragHandle(
+	handle: HTMLButtonElement,
+	blockEl: HTMLElement,
+	group: TagGroup,
+	block: TagBlock,
+) {
+	if (group.locked) {
+		return;
+	}
+
+	if (!Platform.isMobileApp) {
+		handle.draggable = true;
+
+		handle.addEventListener('dragstart', (event: DragEvent) => {
+			if (!event.dataTransfer) {
+				return;
+			}
+
+			this.draggedBlock = {
+				groupId: group.id,
+				blockId: block.id,
+			};
+			blockEl.addClass('tag-manager-block-is-dragging');
+			event.dataTransfer.setData(BLOCK_DRAG_TYPE, block.id);
+			event.dataTransfer.setData(
+				'application/x-tag-manager-block-source-group',
+				group.id,
+			);
+			event.dataTransfer.effectAllowed = 'move';
+		});
+
+		handle.addEventListener('dragend', () => {
+			this.draggedBlock = null;
+			this.clearBlockDragStyles();
+		});
+		return;
+	}
+
+	let activePointerId: number | null = null;
+	let startX = 0;
+	let startY = 0;
+	let targetBlockId: string | null = null;
+	let placeAfter = false;
+
+	const resetPointerDrag = () => {
+		activePointerId = null;
+		targetBlockId = null;
+		this.draggedBlock = null;
+		this.clearBlockDragStyles();
+	};
+
+	handle.addEventListener('pointerdown', (event: PointerEvent) => {
+		if (!event.isPrimary || event.button !== 0) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		activePointerId = event.pointerId;
+		startX = event.clientX;
+		startY = event.clientY;
+		this.draggedBlock = {
+			groupId: group.id,
+			blockId: block.id,
+		};
+		handle.setPointerCapture(event.pointerId);
+	});
+
+	handle.addEventListener('pointermove', (event: PointerEvent) => {
+		if (event.pointerId !== activePointerId) {
+			return;
+		}
+
+		const distanceSquared =
+			(event.clientX - startX) ** 2 +
+			(event.clientY - startY) ** 2;
+		if (distanceSquared < 16) {
+			return;
+		}
+
+		event.preventDefault();
+		blockEl.addClass('tag-manager-block-is-dragging');
+
+		const target = blockEl.ownerDocument
+			.elementFromPoint(event.clientX, event.clientY)
+			?.closest<HTMLElement>('.tag-manager-block');
+		if (
+			!target ||
+			target.dataset.groupId !== group.id ||
+			target.dataset.blockId === block.id
+		) {
+			targetBlockId = null;
+			this.clearBlockDragStyles();
+			blockEl.addClass('tag-manager-block-is-dragging');
+			return;
+		}
+
+		const bounds = target.getBoundingClientRect();
+		targetBlockId = target.dataset.blockId ?? null;
+		placeAfter = event.clientY >= bounds.top + bounds.height / 2;
+		this.showBlockDropIndicator(target, placeAfter);
+	});
+
+	handle.addEventListener('pointerup', (event: PointerEvent) => {
+		if (event.pointerId !== activePointerId) {
+			return;
+		}
+
+		const destinationBlockId = targetBlockId;
+		const insertAfter = placeAfter;
+		resetPointerDrag();
+
+		if (destinationBlockId) {
+			void this.moveBlock(
+				group,
+				block.id,
+				destinationBlockId,
+				insertAfter,
+			);
+		}
+	});
+
+	for (const eventName of ['pointercancel', 'lostpointercapture']) {
+		handle.addEventListener(eventName, resetPointerDrag);
+	}
+}
+
+private async moveBlock(
+	group: TagGroup,
+	sourceBlockId: string,
+	targetBlockId: string,
+	placeAfter: boolean,
+) {
+	if (sourceBlockId === targetBlockId || group.locked) {
+		return;
+	}
+
+	const sourceBlock = group.blocks.find(
+		(block) => block.id === sourceBlockId,
+	);
+	if (!sourceBlock) {
+		return;
+	}
+
+	const reorderedBlocks = group.blocks.filter(
+		(block) => block.id !== sourceBlockId,
+	);
+	const targetIndex = reorderedBlocks.findIndex(
+		(block) => block.id === targetBlockId,
+	);
+	if (targetIndex === -1) {
+		return;
+	}
+
+	reorderedBlocks.splice(
+		targetIndex + (placeAfter ? 1 : 0),
+		0,
+		sourceBlock,
+	);
+
+	if (
+		reorderedBlocks.every(
+			(block, index) => block.id === group.blocks[index]?.id,
+		)
+	) {
+		return;
+	}
+
+	group.blocks = reorderedBlocks;
+	await this.plugin.saveDataToDisk();
+	this.render();
 }
 
 private renderUngrouped(

@@ -39,6 +39,7 @@ const zh = {
 	deleteGroup: '删除分组',
 
 	// Block
+	moveBlock: '移动块',
 	createBlock: '拖到这里创建新块',
 	blockCreated: (tag: string) =>
 		`已使用 #${tag} 创建新块`,

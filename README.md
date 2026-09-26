@@ -18,6 +18,7 @@ Regular grouping, moving, and sorting operations only change the plugin's organi
 
 - Organize existing tags into custom groups.
 - Divide a group into multiple tag blocks.
+- Reorder blocks manually with drag handles.
 - Move or copy tags with drag and drop.
 - Lock groups to prevent accidental changes.
 - Sort tags and groups by name or usage frequency.
@@ -27,6 +28,8 @@ Regular grouping, moving, and sorting operations only change the plugin's organi
 - Rename or delete groups.
 - Rename tags in supported Markdown content and YAML tag lists.
 - Batch-select tags for faster organization of large vaults.
+- Keep large ungrouped tag collections in a compact, scrollable area.
+- Open tag context menus with a right-click on desktop or a long press on mobile.
 - Automatically use English or Chinese based on Obsidian's interface language.
 
 ### Installation
@@ -42,8 +45,9 @@ Regular grouping, moving, and sorting operations only change the plugin's organi
 2. Select the plus button in the toolbar to create a group.
 3. Drag a tag onto a group header to add it to the group's first block.
 4. Drag a tag to the drop zone at the bottom of a group to create a new block.
-5. Select a group header to expand or collapse it.
-6. Select the lock icon to lock or unlock a group.
+5. Drag the handle on the left side of a block to change its position within the group.
+6. Select a group header to expand or collapse it.
+7. Select the lock icon to lock or unlock a group.
 
 ### Drag-and-drop behavior
 
@@ -51,13 +55,16 @@ Regular grouping, moving, and sorting operations only change the plugin's organi
 - From one group to another: copies the tag and keeps it in the source group.
 - Onto a group header: adds the tag to the target group's first block.
 - Onto the drop zone at the bottom of a group: creates a new block containing the tag.
+- From a block's drag handle: reorders the block within its current group.
 - Locked groups do not accept dropped tags and cannot be modified.
 
 Dragging a tag into the Obsidian editor still inserts the standard `#tag` format.
 
+Block handles appear when you hover over a block on desktop. On touch devices, they remain subtly visible because mobile devices do not have a reliable hover state. Blocks can only be reordered inside their current group.
+
 ### Context menus
 
-Right-click a tag to:
+Right-click a tag on desktop, or long-press it on a touch device, to:
 
 - Remove it from the current group.
 - Rename the tag.
@@ -69,6 +76,10 @@ Right-click a group header to:
 - Delete the group.
 
 Deleting a group only removes the plugin's organization data. It does not delete tags or notes from the vault.
+
+### Ungrouped tags
+
+The ungrouped area grows naturally when it contains only a few tags. When the list becomes large, the area uses a limited height and scrolls independently so that grouped tags remain easy to reach.
 
 ### Sorting and frequency
 

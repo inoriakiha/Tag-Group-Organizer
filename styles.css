@@ -71,7 +71,7 @@
 
 /* 未分组标签与分组内标签使用相同的换行和间距规则。 */
 .tag-manager-ungrouped-tags,
-.tag-manager-block {
+.tag-manager-block-tags {
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
@@ -83,6 +83,10 @@
 .tag-manager-ungrouped-tags {
 	margin: 0;
 	padding: 0 6px 12px 22px;
+	max-height: min(280px, 35vh);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	align-content: flex-start;
 }
 
 /* ============================================================
@@ -95,14 +99,120 @@
 	flex-direction: column;
 	gap: 8px;
 	min-width: 0;
-	padding: 0 6px 8px 22px;
+	padding: 0 6px 8px 2px;
 }
 
-/* 单个标签块：允许标签自动换行。 */
+/* 单个标签块：左侧为排序手柄，右侧标签区域自动换行。 */
 .tag-manager-block {
+	position: relative;
+	display: flex;
+	align-items: flex-start;
+	gap: 2px;
 	width: 100%;
 	min-height: 24px;
 	margin-bottom: 5px;
+}
+
+/* Block 内的标签占据剩余宽度，避免拖拽手柄挤压标签单元格。 */
+.tag-manager-block-tags {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* 独立手柄仅负责 Block 排序，不占用标签的交互区域。 */
+.tag-manager-block-drag-handle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 18px;
+	width: 18px;
+	height: 24px;
+	min-width: 18px;
+	min-height: 24px;
+	padding: 0;
+	color: var(--text-faint);
+	cursor: grab;
+	opacity: 0.45;
+	touch-action: none;
+	transition:
+		opacity 0.15s ease,
+		color 0.15s ease;
+}
+
+.tag-manager-block-drag-handle:hover {
+	color: var(--text-muted);
+	opacity: 0.75;
+}
+
+.tag-manager-block-drag-handle:active {
+	cursor: grabbing;
+	opacity: 1;
+}
+
+.tag-manager-block-drag-handle svg {
+	width: 14px;
+	height: 14px;
+}
+
+.tag-manager-block-drag-handle:disabled {
+	cursor: default;
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* 鼠标设备默认隐藏手柄，进入整个 Block 后再淡入。 */
+@media (hover: hover) and (pointer: fine) {
+	.tag-manager-block-drag-handle {
+		opacity: 0;
+	}
+
+	.tag-manager-block:hover
+		.tag-manager-block-drag-handle:not(:disabled),
+	.tag-manager-block-drag-handle:focus-visible {
+		opacity: 0.75;
+	}
+
+	.tag-manager-block-is-dragging
+		.tag-manager-block-drag-handle:not(:disabled) {
+		opacity: 1;
+	}
+}
+
+/* 触屏没有可靠的悬停状态：保留弱提示并扩大实际触摸区域。 */
+@media (pointer: coarse) {
+	.tag-manager-block-drag-handle {
+		flex-basis: 28px;
+		width: 28px;
+		height: 28px;
+		min-width: 28px;
+		min-height: 28px;
+		margin-right: -5px;
+		margin-left: -5px;
+	}
+}
+
+/* 排序过程中弱化来源 Block，并标出目标插入位置。 */
+.tag-manager-block-is-dragging {
+	opacity: 0.45;
+}
+
+.tag-manager-block-drop-before::before,
+.tag-manager-block-drop-after::after {
+	position: absolute;
+	left: 20px;
+	right: 0;
+	height: 2px;
+	border-radius: 2px;
+	background-color: var(--interactive-accent);
+	content: '';
+}
+
+.tag-manager-block-drop-before::before {
+	top: -5px;
+}
+
+.tag-manager-block-drop-after::after {
+	bottom: -5px;
 }
 
 /* 标签拖到已有块上方时的目标提示。 */
